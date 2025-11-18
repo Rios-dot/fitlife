@@ -73,7 +73,7 @@ export default function Home() {
           </p>
 
           <div className="mt-4">
-            <Link href="/quiz">
+            <Link href="/avaliacao">
               <Button size="lg" className="bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 text-lg px-8 py-6">
                 Começar Avaliação Gratuita
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -171,7 +171,7 @@ export default function Home() {
             Comece sua jornada hoje com nosso quiz personalizado e descubra 
             o melhor plano para alcançar seus objetivos.
           </p>
-          <Link href="/quiz">
+          <Link href="/avaliacao">
             <Button size="lg" className="bg-white text-orange-600 hover:bg-gray-100 shadow-xl text-lg px-8 py-6">
               Começar Avaliação Gratuita
               <ArrowRight className="ml-2 h-5 w-5" />

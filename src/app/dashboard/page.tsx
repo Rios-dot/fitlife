@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -18,24 +19,55 @@ import {
   CheckCircle,
   ArrowRight,
   Award,
+  Gift,
+  Clock,
 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [showTrialBanner, setShowTrialBanner] = useState(true);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(7);
 
   useEffect(() => {
     const profile = localStorage.getItem('userProfile');
     if (profile) {
       setUserProfile(JSON.parse(profile));
     }
+
+    // Verificar se usuário tem teste gratuito ativo
+    const trialData = localStorage.getItem('freeTrial');
+    if (trialData) {
+      const trial = JSON.parse(trialData);
+      const daysLeft = Math.ceil((new Date(trial.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      setTrialDaysLeft(daysLeft > 0 ? daysLeft : 0);
+      setShowTrialBanner(daysLeft > 0);
+    }
   }, []);
+
+  const startFreeTrial = () => {
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 7);
+    
+    localStorage.setItem('freeTrial', JSON.stringify({
+      startDate: new Date().toISOString(),
+      endDate: trialEndDate.toISOString(),
+      active: true,
+    }));
+
+    setTrialDaysLeft(7);
+    setShowTrialBanner(true);
+    
+    // Redirecionar para formulário de dados pessoais
+    router.push('/checkout?trial=true');
+  };
 
   const stats = [
     {
       icon: TrendingDown,
       label: 'Peso Atual',
       value: userProfile?.weight ? `${userProfile.weight} kg` : '-- kg',
-      change: '-2.5 kg',
+      change: userProfile?.targetWeight ? `Meta: ${userProfile.targetWeight} kg` : '--',
       gradient: 'from-orange-500 to-red-600',
     },
     {
@@ -80,6 +112,57 @@ export default function DashboardPage() {
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">
+        {/* Trial Banner */}
+        {showTrialBanner && (
+          <Card className="mb-8 p-6 bg-gradient-to-r from-orange-500 to-pink-600 text-white border-0">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                  <Gift className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Teste Gratuito Ativo!</h3>
+                  <p className="text-white/90 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    {trialDaysLeft} dias restantes
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => router.push('/checkout')}
+                className="bg-white text-orange-600 hover:bg-gray-100"
+              >
+                Assinar Agora
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Free Trial CTA (se não tiver teste ativo) */}
+        {!showTrialBanner && (
+          <Card className="mb-8 p-6 border-2 border-orange-500 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-950/20 dark:to-pink-950/20">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center">
+                  <Gift className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Experimente 7 Dias Grátis!</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Acesso completo a todos os recursos sem compromisso
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={startFreeTrial}
+                className="bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white"
+              >
+                Iniciar Teste Gratuito
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">

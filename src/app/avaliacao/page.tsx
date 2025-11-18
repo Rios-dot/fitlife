@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowLeft, User, Activity, Target, MapPin } from 'lucide-react';
+import { ArrowRight, ArrowLeft, User, Activity, Target, Dumbbell, Apple, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,9 +25,16 @@ export default function AvaliacaoPage() {
     activityLevel: '',
     goal: '',
     trainingLocation: '',
+    // Quiz questions
+    trainingFrequency: '',
+    dietPreference: '',
+    healthConditions: '',
+    sleepHours: '',
+    stressLevel: '',
+    motivation: '',
   });
 
-  const totalSteps = 4;
+  const totalSteps = 6;
 
   const updateFormData = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -37,8 +44,20 @@ export default function AvaliacaoPage() {
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      // Salvar dados e redirecionar para dashboard
+      // Salvar dados e sincronizar com dashboard
       localStorage.setItem('userProfile', JSON.stringify(formData));
+      
+      // Criar teste gratuito automaticamente
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      
+      localStorage.setItem('freeTrial', JSON.stringify({
+        startDate: new Date().toISOString(),
+        endDate: trialEndDate.toISOString(),
+        active: true,
+      }));
+      
+      // Redirecionar para dashboard
       router.push('/dashboard');
     }
   };
@@ -59,6 +78,10 @@ export default function AvaliacaoPage() {
         return formData.activityLevel;
       case 4:
         return formData.goal && formData.trainingLocation;
+      case 5:
+        return formData.trainingFrequency && formData.dietPreference;
+      case 6:
+        return formData.sleepHours && formData.stressLevel && formData.motivation;
       default:
         return false;
     }
@@ -70,6 +93,16 @@ export default function AvaliacaoPage() {
 
       <div className="container mx-auto px-4 py-8 md:py-16">
         <div className="max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-orange-500 to-pink-600 bg-clip-text text-transparent">
+              Avaliação Gratuita
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Complete o quiz e ganhe 7 dias de teste grátis!
+            </p>
+          </div>
+
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
@@ -340,6 +373,203 @@ export default function AvaliacaoPage() {
               </div>
             )}
 
+            {/* Step 5: Frequência e Dieta */}
+            {step === 5 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                    <Dumbbell className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Rotina e Alimentação</h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Conte-nos sobre seus hábitos
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-3 block">Quantas vezes por semana você pode treinar?</Label>
+                  <RadioGroup
+                    value={formData.trainingFrequency}
+                    onValueChange={(value) => updateFormData('trainingFrequency', value)}
+                    className="space-y-3"
+                  >
+                    {[
+                      { value: '1-2', label: '1-2 vezes por semana' },
+                      { value: '3-4', label: '3-4 vezes por semana' },
+                      { value: '5-6', label: '5-6 vezes por semana' },
+                      { value: '7', label: 'Todos os dias' },
+                    ].map((freq) => (
+                      <div
+                        key={freq.value}
+                        className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          formData.trainingFrequency === freq.value
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                        }`}
+                      >
+                        <RadioGroupItem value={freq.value} id={`freq-${freq.value}`} />
+                        <Label htmlFor={`freq-${freq.value}`} className="cursor-pointer flex-1 font-semibold">
+                          {freq.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <Label className="mb-3 block">Preferência Alimentar</Label>
+                  <RadioGroup
+                    value={formData.dietPreference}
+                    onValueChange={(value) => updateFormData('dietPreference', value)}
+                    className="space-y-3"
+                  >
+                    {[
+                      { value: 'onivoro', label: 'Onívoro (como de tudo)', icon: Apple },
+                      { value: 'vegetariano', label: 'Vegetariano', icon: Apple },
+                      { value: 'vegano', label: 'Vegano', icon: Apple },
+                      { value: 'low-carb', label: 'Low Carb', icon: Apple },
+                      { value: 'flexivel', label: 'Flexível', icon: Apple },
+                    ].map((diet) => (
+                      <div
+                        key={diet.value}
+                        className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          formData.dietPreference === diet.value
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                        }`}
+                      >
+                        <RadioGroupItem value={diet.value} id={`diet-${diet.value}`} />
+                        <Label htmlFor={`diet-${diet.value}`} className="cursor-pointer flex-1 font-semibold">
+                          {diet.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <Label htmlFor="healthConditions">Condições de Saúde ou Restrições (opcional)</Label>
+                  <Input
+                    id="healthConditions"
+                    placeholder="Ex: diabetes, hipertensão, alergias..."
+                    value={formData.healthConditions}
+                    onChange={(e) => updateFormData('healthConditions', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Estilo de Vida */}
+            {step === 6 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                    <Zap className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Estilo de Vida</h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Últimas perguntas para personalizar seu plano
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-3 block">Quantas horas você dorme por noite?</Label>
+                  <RadioGroup
+                    value={formData.sleepHours}
+                    onValueChange={(value) => updateFormData('sleepHours', value)}
+                    className="grid grid-cols-2 gap-3"
+                  >
+                    {[
+                      { value: 'menos-5', label: 'Menos de 5h' },
+                      { value: '5-6', label: '5-6 horas' },
+                      { value: '7-8', label: '7-8 horas' },
+                      { value: 'mais-8', label: 'Mais de 8h' },
+                    ].map((sleep) => (
+                      <div
+                        key={sleep.value}
+                        className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          formData.sleepHours === sleep.value
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                        }`}
+                      >
+                        <RadioGroupItem value={sleep.value} id={`sleep-${sleep.value}`} />
+                        <Label htmlFor={`sleep-${sleep.value}`} className="cursor-pointer flex-1 font-semibold text-center">
+                          {sleep.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <Label className="mb-3 block">Nível de Estresse no Dia a Dia</Label>
+                  <RadioGroup
+                    value={formData.stressLevel}
+                    onValueChange={(value) => updateFormData('stressLevel', value)}
+                    className="space-y-3"
+                  >
+                    {[
+                      { value: 'baixo', label: 'Baixo - Raramente me sinto estressado' },
+                      { value: 'moderado', label: 'Moderado - Às vezes me sinto estressado' },
+                      { value: 'alto', label: 'Alto - Frequentemente estressado' },
+                      { value: 'muito-alto', label: 'Muito Alto - Constantemente sob pressão' },
+                    ].map((stress) => (
+                      <div
+                        key={stress.value}
+                        className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          formData.stressLevel === stress.value
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                        }`}
+                      >
+                        <RadioGroupItem value={stress.value} id={`stress-${stress.value}`} />
+                        <Label htmlFor={`stress-${stress.value}`} className="cursor-pointer flex-1">
+                          {stress.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <Label className="mb-3 block">O que mais te motiva a alcançar seus objetivos?</Label>
+                  <RadioGroup
+                    value={formData.motivation}
+                    onValueChange={(value) => updateFormData('motivation', value)}
+                    className="space-y-3"
+                  >
+                    {[
+                      { value: 'saude', label: 'Melhorar minha saúde' },
+                      { value: 'estetica', label: 'Melhorar minha aparência' },
+                      { value: 'performance', label: 'Aumentar minha performance' },
+                      { value: 'bem-estar', label: 'Sentir-me melhor comigo mesmo' },
+                      { value: 'social', label: 'Impressionar outras pessoas' },
+                    ].map((motiv) => (
+                      <div
+                        key={motiv.value}
+                        className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          formData.motivation === motiv.value
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                        }`}
+                      >
+                        <RadioGroupItem value={motiv.value} id={`motiv-${motiv.value}`} />
+                        <Label htmlFor={`motiv-${motiv.value}`} className="cursor-pointer flex-1 font-semibold">
+                          {motiv.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            )}
+
             {/* Navigation Buttons */}
             <div className="flex items-center justify-between mt-8 pt-6 border-t">
               <Button
@@ -357,7 +587,7 @@ export default function AvaliacaoPage() {
                 disabled={!isStepValid()}
                 className="bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white gap-2"
               >
-                {step === totalSteps ? 'Finalizar' : 'Próximo'}
+                {step === totalSteps ? 'Finalizar e Ganhar 7 Dias Grátis' : 'Próximo'}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>

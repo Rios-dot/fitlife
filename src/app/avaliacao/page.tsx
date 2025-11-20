@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Navbar } from '@/components/custom/navbar';
 import { ACTIVITY_LEVELS, GOALS, TRAINING_LOCATIONS } from '@/lib/constants';
+import { userService, assessmentService } from '@/lib/supabase-service';
 
 export default function AvaliacaoPage() {
   const router = useRouter();
@@ -40,25 +41,69 @@ export default function AvaliacaoPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      // Salvar dados e sincronizar com dashboard
-      localStorage.setItem('userProfile', JSON.stringify(formData));
-      
-      // Criar teste gratuito automaticamente
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 7);
-      
-      localStorage.setItem('freeTrial', JSON.stringify({
-        startDate: new Date().toISOString(),
-        endDate: trialEndDate.toISOString(),
-        active: true,
-      }));
-      
-      // Redirecionar para dashboard
-      router.push('/dashboard');
+      try {
+        // Salvar dados localmente
+        localStorage.setItem('userProfile', JSON.stringify(formData));
+        
+        // Criar ou atualizar usuário no Supabase
+        let user = await userService.getUserByEmail(formData.email);
+        
+        if (!user) {
+          user = await userService.createUser({
+            email: formData.email,
+            full_name: formData.name,
+            is_trial_active: false,
+            subscription_status: 'inactive',
+          });
+        }
+
+        // Salvar avaliação no Supabase
+        await assessmentService.createAssessment({
+          user_id: user.id,
+          weight: parseFloat(formData.weight),
+          height: parseFloat(formData.height),
+          target_weight: parseFloat(formData.targetWeight),
+          age: parseInt(formData.age),
+          gender: formData.gender,
+          activity_level: formData.activityLevel,
+          goal: formData.goal,
+          dietary_restrictions: formData.dietPreference ? [formData.dietPreference] : [],
+          health_conditions: formData.healthConditions ? [formData.healthConditions] : [],
+        });
+
+        // Iniciar teste gratuito
+        await userService.startFreeTrial(user.id);
+        
+        // Criar teste gratuito localmente
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 7);
+        
+        localStorage.setItem('freeTrial', JSON.stringify({
+          startDate: new Date().toISOString(),
+          endDate: trialEndDate.toISOString(),
+          active: true,
+        }));
+        
+        // Redirecionar para dashboard
+        router.push('/dashboard');
+      } catch (error) {
+        console.error('Erro ao salvar avaliação:', error);
+        // Mesmo com erro, salvar localmente e continuar
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 7);
+        
+        localStorage.setItem('freeTrial', JSON.stringify({
+          startDate: new Date().toISOString(),
+          endDate: trialEndDate.toISOString(),
+          active: true,
+        }));
+        
+        router.push('/dashboard');
+      }
     }
   };
 

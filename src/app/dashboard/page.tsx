@@ -22,44 +22,133 @@ import {
   Gift,
   Clock,
 } from 'lucide-react';
+import { userService, workoutService, mealPlanService } from '@/lib/supabase-service';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showTrialBanner, setShowTrialBanner] = useState(true);
   const [trialDaysLeft, setTrialDaysLeft] = useState(7);
+  const [workouts, setWorkouts] = useState<any[]>([]);
+  const [mealPlans, setMealPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const profile = localStorage.getItem('userProfile');
-    if (profile) {
-      setUserProfile(JSON.parse(profile));
-    }
-
-    // Verificar se usuário tem teste gratuito ativo
-    const trialData = localStorage.getItem('freeTrial');
-    if (trialData) {
-      const trial = JSON.parse(trialData);
-      const daysLeft = Math.ceil((new Date(trial.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      setTrialDaysLeft(daysLeft > 0 ? daysLeft : 0);
-      setShowTrialBanner(daysLeft > 0);
-    }
+    loadUserData();
+    checkTrialStatus();
   }, []);
 
-  const startFreeTrial = () => {
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 7);
-    
-    localStorage.setItem('freeTrial', JSON.stringify({
-      startDate: new Date().toISOString(),
-      endDate: trialEndDate.toISOString(),
-      active: true,
-    }));
+  const loadUserData = async () => {
+    try {
+      // Carregar do localStorage primeiro
+      const localProfile = localStorage.getItem('userProfile');
+      if (localProfile) {
+        const profile = JSON.parse(localProfile);
+        setUserProfile(profile);
 
-    setTrialDaysLeft(7);
-    setShowTrialBanner(true);
-    
-    // Redirecionar para formulário de dados pessoais
-    router.push('/checkout?trial=true');
+        // Se tiver email, buscar do Supabase
+        if (profile.email) {
+          const user = await userService.getUserByEmail(profile.email);
+          if (user) {
+            setUserProfile(user);
+            
+            // Carregar treinos e refeições
+            const userWorkouts = await workoutService.getWorkoutsByUser(user.id);
+            const userMeals = await mealPlanService.getMealPlansByUser(user.id);
+            
+            setWorkouts(userWorkouts || []);
+            setMealPlans(userMeals || []);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkTrialStatus = async () => {
+    try {
+      const localProfile = localStorage.getItem('userProfile');
+      if (!localProfile) return;
+
+      const profile = JSON.parse(localProfile);
+      if (!profile.email) return;
+
+      const user = await userService.getUserByEmail(profile.email);
+      if (!user) return;
+
+      // Verificar se trial expirou
+      const isExpired = await userService.checkTrialExpiration(user.id);
+      
+      if (isExpired) {
+        // Redirecionar para checkout
+        router.push('/checkout?trial=expired');
+        return;
+      }
+
+      // Calcular dias restantes
+      if (user.trial_end_date) {
+        const daysLeft = Math.ceil(
+          (new Date(user.trial_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+        );
+        setTrialDaysLeft(daysLeft > 0 ? daysLeft : 0);
+        setShowTrialBanner(daysLeft > 0 && user.is_trial_active);
+
+        // Se acabou o trial, redirecionar
+        if (daysLeft <= 0 && user.is_trial_active) {
+          router.push('/checkout?trial=expired');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar trial:', error);
+    }
+  };
+
+  const startFreeTrial = async () => {
+    try {
+      const localProfile = localStorage.getItem('userProfile');
+      if (!localProfile) {
+        router.push('/avaliacao');
+        return;
+      }
+
+      const profile = JSON.parse(localProfile);
+      
+      // Criar ou atualizar usuário no Supabase
+      let user = await userService.getUserByEmail(profile.email);
+      
+      if (!user) {
+        user = await userService.createUser({
+          email: profile.email,
+          full_name: profile.name || 'Usuário',
+          is_trial_active: false,
+          subscription_status: 'inactive',
+        });
+      }
+
+      // Iniciar trial
+      await userService.startFreeTrial(user.id);
+
+      // Atualizar localStorage
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      
+      localStorage.setItem('freeTrial', JSON.stringify({
+        startDate: new Date().toISOString(),
+        endDate: trialEndDate.toISOString(),
+        active: true,
+      }));
+
+      setTrialDaysLeft(7);
+      setShowTrialBanner(true);
+      
+      // Redirecionar para formulário de dados pessoais
+      router.push('/checkout?trial=true');
+    } catch (error) {
+      console.error('Erro ao iniciar trial:', error);
+    }
   };
 
   const stats = [
@@ -67,21 +156,21 @@ export default function DashboardPage() {
       icon: TrendingDown,
       label: 'Peso Atual',
       value: userProfile?.weight ? `${userProfile.weight} kg` : '-- kg',
-      change: userProfile?.targetWeight ? `Meta: ${userProfile.targetWeight} kg` : '--',
+      change: userProfile?.target_weight ? `Meta: ${userProfile.target_weight} kg` : '--',
       gradient: 'from-orange-500 to-red-600',
     },
     {
       icon: Dumbbell,
       label: 'Treinos',
-      value: '12',
-      change: 'Esta semana',
+      value: workouts.filter(w => w.completed).length.toString(),
+      change: 'Completados',
       gradient: 'from-blue-500 to-purple-600',
     },
     {
       icon: Flame,
       label: 'Calorias',
-      value: '1,850',
-      change: 'Hoje',
+      value: mealPlans.reduce((sum, m) => sum + (m.calories || 0), 0).toString(),
+      change: 'Total consumido',
       gradient: 'from-yellow-500 to-orange-600',
     },
     {
@@ -94,9 +183,21 @@ export default function DashboardPage() {
   ];
 
   const weeklyGoals = [
-    { id: 1, title: 'Completar 5 treinos', current: 3, target: 5, icon: Dumbbell },
+    { 
+      id: 1, 
+      title: 'Completar 5 treinos', 
+      current: workouts.filter(w => w.completed).length, 
+      target: 5, 
+      icon: Dumbbell 
+    },
     { id: 2, title: 'Beber 2L de água/dia', current: 6, target: 7, icon: Droplet },
-    { id: 3, title: 'Seguir dieta 7 dias', current: 5, target: 7, icon: Apple },
+    { 
+      id: 3, 
+      title: 'Seguir dieta 7 dias', 
+      current: mealPlans.filter(m => m.completed).length, 
+      target: 7, 
+      icon: Apple 
+    },
     { id: 4, title: 'Dormir 8h/noite', current: 4, target: 7, icon: Moon },
   ];
 
@@ -106,6 +207,17 @@ export default function DashboardPage() {
     { id: 3, name: 'Guerreiro', icon: Trophy, unlocked: false },
     { id: 4, name: 'Disciplinado', icon: CheckCircle, unlocked: false },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
@@ -166,7 +278,7 @@ export default function DashboardPage() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">
-            Olá, {userProfile?.name?.split(' ')[0] || 'Atleta'}! 👋
+            Olá, {userProfile?.full_name?.split(' ')[0] || userProfile?.name?.split(' ')[0] || 'Atleta'}! 👋
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">
             Continue firme na sua jornada de transformação
@@ -279,7 +391,10 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <Card className="p-6 border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+          <Card 
+            onClick={() => router.push('/treinos')}
+            className="p-6 border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group"
+          >
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Dumbbell className="h-6 w-6 text-white" />
             </div>
@@ -289,7 +404,10 @@ export default function DashboardPage() {
             </p>
           </Card>
 
-          <Card className="p-6 border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+          <Card 
+            onClick={() => router.push('/alimentacao')}
+            className="p-6 border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group"
+          >
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Apple className="h-6 w-6 text-white" />
             </div>
@@ -299,7 +417,10 @@ export default function DashboardPage() {
             </p>
           </Card>
 
-          <Card className="p-6 border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+          <Card 
+            onClick={() => router.push('/progresso')}
+            className="p-6 border-2 hover:shadow-xl transition-all duration-300 cursor-pointer group"
+          >
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <TrendingDown className="h-6 w-6 text-white" />
             </div>

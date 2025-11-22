@@ -24,24 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-// app/checkout/page.js
 
-// 1. Importe 'Suspense' do React
-import { Suspense } from 'react'; 
-// 2. Importe o componente cliente que usa useSearchParams
-import CheckoutForm from './CheckoutForm'; // (Ajuste o caminho se for diferente)
-
-export default function CheckoutPage() {
-  return (
-    // 3. Envolva o seu componente de cliente com <Suspense>
-    <Suspense fallback={<div>Carregando informações do pedido...</div>}>
-      <CheckoutForm />
-    </Suspense>
-  );
-}
-
-// 4. (Opcional, mas útil) Você pode definir um loader simples
-// Ou se preferir, crie um componente de 'loading.js' no mesmo diretório.
 export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const isTrial = searchParams?.get('trial') === 'true';

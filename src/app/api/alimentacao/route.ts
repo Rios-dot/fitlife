@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from "@/lib/supabase";
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
+  try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const planoId = searchParams.get('planoId');
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ success: true, data });
+
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -37,10 +40,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const body = await request.json();
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('planos_alimentares')
       .insert([body])
       .select()
@@ -48,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ success: true, data }, { status: 201 });
+
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -58,7 +66,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const body = await request.json();
     const { id, ...updateData } = body;
 
@@ -69,7 +81,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('planos_alimentares')
       .update(updateData)
       .eq('id', id)
@@ -78,6 +90,7 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ success: true, data });
+
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -88,7 +101,11 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -99,13 +116,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error } = await supabase
+    const { error } = await client
       .from('planos_alimentares')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Plano alimentar deletado com sucesso' });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Plano alimentar deletado com sucesso'
+    });
+
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

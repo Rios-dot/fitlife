@@ -39,6 +39,39 @@ export default function CheckoutClientContent({ initialSearchParams }: CheckoutC
   ];
 
   const selectedPlanData = plans.find((p) => p.id === selectedPlan)!;
-  return (
+    return (
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+      <Navbar />
+
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Back Button */}
+        <Link href={isTrial ? "/dashboard" : "/"}>
+          <Button variant="ghost" className="mb-6 gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+        </Link>
+
+        {/* Header */}
+        <div className="text-center mb-12">
+          {/* ... conteúdo do header (isTrial, Oferta Especial, h1, p) ... */}
+        </div>
+
+        {/* Step 1: Formulário de Dados Pessoais */}
+        {step === 1 && (
+          // ... todo o código do Formulário (Dados Pessoais) ...
+        )}
+
+        {/* Step 2: Seleção de Plano e Pagamento */}
+        {step === 2 && (
+          // ... todo o código da Seleção de Planos e Resumo do Pedido ...
+        )}
+
+        {/* Trust Badges */}
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          {/* ... badges de confiança ... */}
+        </div>
+      </div>
+    </div>
   );
 }

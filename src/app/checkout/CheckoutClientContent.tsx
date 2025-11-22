@@ -39,9 +39,6 @@ export default function CheckoutClientContent({ initialSearchParams }: CheckoutC
   ];
 
   const selectedPlanData = plans.find((p) => p.id === selectedPlan)!;
-  
-  // ... Mantenha o restante das suas funções e o return JSX.
-
   return (
   );
 }

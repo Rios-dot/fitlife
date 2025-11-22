@@ -43,6 +43,5 @@ export default function CheckoutClientContent({ initialSearchParams }: CheckoutC
   // ... Mantenha o restante das suas funções e o return JSX.
 
   return (
-    // ... Seu JSX COMPLETO (o mesmo que você me enviou)
   );
 }
